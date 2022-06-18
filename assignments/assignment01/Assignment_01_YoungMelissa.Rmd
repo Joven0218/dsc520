@@ -211,7 +211,7 @@ rowSums(grades)
 weighted_grades <- grades * 0.1 + grades
 ```{r}
 weighted_grades <- grades * 0.1 + grades
-weighted_grades
+
 ```
 
 ## Create a factor of book genres using the genres_vector
@@ -220,7 +220,8 @@ genres_vector <- c("Fantasy", "Sci-Fi", "Sci-Fi", "Mystery", "Sci-Fi", "Fantasy"
 factor_genre_vector <- ___
 ```{r}
 genres_vector <- c("Fantasy", "Sci-Fi", "Sci-Fi", "Mystery", "Sci-Fi", "Fantasy")
-factor_genre_vector <- genres_vector
+factor_genre_vector <- as.factor(genres_vector)
+
 ```
 
 
@@ -244,7 +245,7 @@ recommendations_vector <- c("neutral", "no", "no", "neutral", "yes")
 factor_recommendations_vector <- factor(
   recommendations_vector,
   ordered = T,
-  levels = c('no', 'nuetral', 'yes')
+  levels = c('no', 'neutral', 'yes')
 )
 ```
 
