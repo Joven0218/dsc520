@@ -1,0 +1,108 @@
+---
+title: "2014 American Community Survey_YoungMelissa.Rmd"
+author: "Melissa Young"
+date: "June 24, 2022"
+output: pdf_document
+---
+
+## Load the packages
+library(ggplot2)
+library(pastecs)
+library(psych)
+
+```{r}
+library(ggplot2)
+library(pastecs)
+library(psych)
+library(formatR)
+```
+
+```{r, echo = F}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+## Load the csv fileto
+df <- read.csv("acs-14-1yr-s0201.csv")
+```{r}
+df <- read.csv("acs-14-1yr-s0201.csv")
+```
+
+
+##1. What are the elements in your data (including the categories and data types)?
+
+```{r}
+summary(df)
+```
+
+##2. Please provide the output from the following functions: str(); nrow(); ncol()
+```{r}
+str(df)
+nrow(df)
+ncol(df)
+```
+
+##3. Create a Histogram of the HSDegree variable using the ggplot2 package.\
+3.1 Set a bin size for the Histogram.\
+3.2 Include a Title and appropriate X/Y axis labels on your Histogram Plot.
+```{r}
+ggplot(data = df, aes (x=HSDegree)) + geom_histogram(bins = 50, color = "black", fill = "blue", alpha = 0.7) + ggtitle("Histogram of HSDegree") + xlab("Percent of Population with HSDegree") + ylab("Count")
+```
+
+##4. Answer the following questions based on the Histogram produced: \
+
+##4.1 Based on what you see in this histogram, is the data distribution unimodal? \
+Answer - Yes, there is only one hump. \
+##4.2 Is it approximately symmetrical? \
+Answer - No, it seems to be negatively skewed to the left. \
+##4.3 Is it approximately bell-shaped? \
+Answer - No \
+##4.4 Is it approximately normal? \
+Answer - No, would be more bell shaped and symmetrical. \
+##4.5 If not normal, is the distribution skewed? If so, in which direction? \
+Answer - It's negatively skewed to the left. \ 
+##4.6 Include a normal curve to the Histogram that you plotted. \
+
+```{r}
+ggplot(data = df, aes(x = HSDegree)) + geom_histogram(aes(y = ..density..), bins = 50, colour = "black", fill = "blue", alpha = 0.7) +
+  stat_function(fun = dnorm, args = list(mean = mean(df$HSDegree), sd = sd(df$HSDegree)), color = "red") + 
+  ggtitle("Histogram of HSDegree") +
+  xlab ("Percent of Population with HSDegree") +
+  ylab ("Count")
+```
+
+
+##4.7 Explain whether a normal distribution can accurately be used as a model for this data. \
+Answer - A normal distribution would not work with this dataset, as it is skewed.\
+
+##5. Create a Probability Plot of the HSDegree variable.
+```{r}
+ggplot(data = df, aes(x = HSDegree)) + geom_density(fill = "Orange") + ggtitle("Probabilty Plot of HSDegree") + xlab("Percent of Population with HSDegree") + ylab("Density") 
+```
+
+##6. Answer the following questions based on the Probability Plot: \
+
+##6.1 Based on what you see in this probability plot, is the distribution approximately normal? Explain how you know.\
+Answer - No, this plot is not normal because it is not symmetrical. There is a tail from the left. \
+##6.2 If not normal, is the distribution skewed? If so, in which direction? Explain how you know. \
+Answer - Yes, skewed to the left. This plot is negative skew, with the longer tail on the left of the distribution. \
+
+##7. Now that you have looked at this data visually for normality, you will now quantify normality with numbers using the stat.desc() function. Include a screen capture of the results produced.
+```{r}
+round(stats <- stat.desc(df$HSDegree, basic = FALSE, norm = TRUE), digits = 3)
+```
+
+z_score <- round((df$HSDegree-mean(df$HSDegree))/sd(df$HSDegree), digits = 3)
+```{r}
+z_score <- round((df$HSDegree-mean(df$HSDegree))/sd(df$HSDegree), digits = 3)
+z_score
+```
+
+
+
+##8. In several sentences provide an explanation of the result produced for skew, kurtosis, and z-scores. In addition, explain how a change in the sample size may change your explanation? \
+Answer - For the Skew we see a value of -1.675 this indicates that the distribution is highly negatively skewed to the left.\
+The Kurtosis is 4.353, this indicates a large tail with outliers. \
+The z-scores show high levels of variability with the outliers. \
+If you change to sample size, the summary stastics can be impacted by significant outliers and the denominator changes etc. 
+
