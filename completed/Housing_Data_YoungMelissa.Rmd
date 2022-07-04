@@ -1,0 +1,106 @@
+---
+title: "Housing_Dataset_YoungMelissa"
+author: "Melissa Young"
+date: "July 3, 2022"
+output: pdf_document
+---
+
+```{r, echo = F}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+# Load appropriate packages
+library(tidyr)
+library(pastecs)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+```{r,warning=FALSE,message=FALSE}
+library(tidyr)
+library(pastecs)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(formatR)
+library(reshape)
+```
+
+```{r}
+read_excel("C:\\Users\\mdyoung\\OneDrive - Bankers Financial Corporation\\Documents\\R\\DSC 520\\week-6-housing.xlsx")
+```
+
+```{r}
+df <- read_excel("C:\\Users\\mdyoung\\OneDrive - Bankers Financial Corporation\\Documents\\R\\DSC 520\\week-6-housing.xlsx")
+```
+
+
+
+#1. Use the apply function on a variable in your dataset.
+```{r}
+apply(select(df, c(2,14)), 2, sum)
+```
+#2. Use the aggregate function on a variable in your dataset
+```{r}
+aggregate(df$`Sale Price` ~ df$'type', df, mean)
+```
+#3. Use the plyr function on a variable in your dataset - more specifically, I want to see you split some data, perform a modification to the data, and then bring it back together.
+```{r}
+df %>%
+mutate(
+        year = substr(df$`Sale Date`,  1, 4),
+        month = substr(df$`Sale Date`,  6, 7),
+        day = substr(df$`Sale Date`, 9, 10))
+```
+
+```{r}
+by_year <-
+  df %>%
+  group_by(year) %>%
+  summarise(`Total Sales by Year` = sum(`Sale Price`))
+  
+```
+```{r}
+by_year
+```
+
+
+#4. Check distributions of the data.
+```{r}
+df %>%
+  group_by(year) %>%
+  summarise(`Sale Price` = sum(`Sale Price`)/1000000) %>%
+  ggplot(aes(x = year, y = `Sale Price`)) + 
+  geom_bar(
+    stat = 'identity',
+    size = .5,
+    color = 'black',
+    fill = 'orange',
+    alpha = 1) +
+  ggtitle("Density check of Total Sales by Year")
+```
+
+#4. Check distributions of the data.
+```{r}
+by_year %>%
+ggplot(aes(x = 'Total Sales by Year')) + geom_density(fill = 'orange') +
+  stat_function(fun = dnorm, args = list(
+    mean = mean(by_year$`Total Sales by Year`),
+    sd = sd(by_year$`Total Sales by Year`))) + ggtitle("Density of Sales by Year")
+```
+
+#5. Identify if there are any outliers.
+```{r}
+boxplot((by_year$`Total Sales by Year`)/1000000)
+boxplot.stats((by_year$`Total Sales by Year`)/1000000)$out
+
+```
+#6. Create at least 2 new variables.
+```{r}
+df %>%
+  mutate(`Price Per SqFt` = round(df$`Sale Price`/ df$square_feet_total_living,2),
+         `Age of Home` = (df$year - df$year_built))
+```
+
+
