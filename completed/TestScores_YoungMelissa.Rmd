@@ -1,0 +1,117 @@
+---
+title: "TestScores_YoungMelissa"
+author: "Melissa Young"
+date: "June 29, 2022"
+output: pdf_document
+---
+
+```{r, echo = F}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
+```
+# Load appropriate packages
+```{r,warning=FALSE,message=FALSE}
+library(ggplot2)
+library(pastecs)
+library(psych)
+library(formatR)
+library(plyr)
+library(dplyr)
+library(car)
+library(reshape)
+```
+
+df <- read.csv("scores.csv")
+```{r}
+df <- read.csv("scores.csv")
+```
+
+
+#Test Score
+
+##1. A professor has recently taught two sections of the same course with only one difference between the sections. In one section, he used only examples taken from sports applications, and in the other section, he used examples taken from a variety of application areas. The sports themed section was advertised as such; so students knew which type of section they were enrolling in. The professor has asked you to compare student performance in the two sections using course grades and total points earned in the course. You will need to import the Scores.csv dataset that has been provided for you. 
+
+###1. Use the appropriate R functions to answer the following questions: 
+
+####1.1 What are the observational units in this study?
+```{r}
+str(df)
+```
+
+
+####1.2 Identify the variables mentioned in the narrative paragraph and determine which are categorical and quantitative? \
+Count = quantitative \
+Score = quantitative \
+Section = categorical \
+
+
+####1.3 Create one variable to hold a subset of your data set that contains only the Regular Section and one variable for the Sports Section.
+```{r}
+  Regular <- df %>%
+    filter(Section == "Regular") %>%
+    group_by(Score) %>%
+    summarise(Count = sum(Count))
+
+  Sports <- df %>%
+    filter(Section == "Sports") %>%
+    group_by(Score) %>%
+    summarise(Count = sum(Count))
+```
+
+####1.4 Use the Plot function to plot each Sections scores and the number of students achieving that score. Use additional Plot Arguments to label the graph and give each axis an appropriate label. Once you have produced your Plots answer the following questions: 
+```{r}
+plot(x = Regular$Score, 
+     y = Regular$Count,
+     type = 'b',
+     xlab = 'Score',
+     ylab = 'Count',
+     main = 'Regular')
+```
+```{r}
+  plot(x = Sports$Score,
+       y = Sports$Count,
+       type = 'b',
+       xlab = 'Score',
+       ylab = 'Count',
+       main = 'Sports')
+```
+
+```{r}
+ df %>%
+    group_by(Section, Score) %>%
+    summarise(Count = sum(Count)) %>%
+    ggplot(aes(x = Score, y = Count)) +
+    geom_bar(
+      stat = 'identity',
+      size = .5,
+      color = 'black',
+      fill = 'orange',
+      alpha = 1
+    ) +
+    facet_wrap(.~ Section) +
+    ggtitle('Student Score Count by Course Section')
+```
+```{r}
+  df %>%
+    group_by(Section, Score) %>%
+    summarise(Count = sum(Count)) %>% ggplot(aes(x = Score)) +
+    geom_density(fill = "orange") +
+    facet_wrap(. ~ Section) +
+    stat_function(fun = dnorm, args = list(mean = mean(df$Score), sd = sd(df$Score)))
+```
+
+####1.4.1 Comparing and contrasting the point distributions between the two section, looking at both tendency and consistency: Can you say that one section tended to score more points than the other? Justify and explain your answer. \
+Yes, the regular course scored higher than the sports which is shown by the density of the mean scores at a higher peak. \ 
+
+####1.4.2 Did every student in one section score more points than every student in the other section? If not, explain what a statistical tendency means in this context. \
+No, the central tendency median and mean are showing that some students scored better than others in both courses. \  
+```{r}
+ stat.desc(Regular)
+```
+```{r}
+ stat.desc(Sports)
+```
+
+
+####1.4.3 What could be one additional variable that was not mentioned in the narrative that could be influencing the point distributions between the two sections? \
+What other courses were the students enrolled in at the time these courses were taken?  Were the sports minded students taking this course at 8am on Saturdays? After a long night of team sports.  \
