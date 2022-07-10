@@ -1,0 +1,105 @@
+---
+title: "Week_5_Transformations_YoungMelissa"
+author: "Melissa Young"
+date: "July 6, 2022"
+output: pdf_document
+---
+
+```{r, echo = F}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+```{r,warning=FALSE,message=FALSE}
+library(tidyr)
+library(pastecs)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(purrr)
+library(gapminder)
+```
+
+#1. Using either the same dataset(s) you used in the previous weeks' exercise or a brand-new dataset of your choosing, perform the following transformations (Remember, anything you learn about the Housing dataset in these two weeks can be used for a later exercise!)
+
+```{r}
+read_excel("C:\\Users\\mdyoung\\OneDrive - Bankers Financial Corporation\\Documents\\R\\DSC 520\\week-6-housing.xlsx")
+```
+
+```{r}
+df <- read_excel("C:\\Users\\mdyoung\\OneDrive - Bankers Financial Corporation\\Documents\\R\\DSC 520\\week-6-housing.xlsx")
+```
+
+##1.  Using the dplyr package, use the 6 different operations to analyze/transform the data - GroupBy, Summarize, Mutate, Filter, Select, and Arrange - Remember this isn't just modifying data, you are learning about your data also - so play around and start to understand your dataset in more detai. 
+
+```{r}
+by_year <-
+  df %>%
+  group_by(year) %>%
+  summarise(`Total Sales by Year` = sum(`Sale Price`))
+  
+```
+```{r}
+by_year
+```
+```{r}
+df %>%
+mutate(
+        year = substr(df$`Sale Date`,  1, 4),
+        month = substr(df$`Sale Date`,  6, 7),
+        day = substr(df$`Sale Date`, 9, 10))
+```
+```{r}
+df %>%
+filter(`Sale Price`>4000000)
+```
+```{r}
+df %>% select(square_feet_total_living, `Sale Price`) %>%
+arrange(desc(`square_feet_total_living`))
+
+```
+
+
+
+##2. Using the purrr package - perform 2 functions on your dataset.  You could use zip_n, keep, discard, compact, etc.
+
+```{r}
+timesFive <- function(.x) {
+  return(.x * 5)}
+map(.x = by_year$`Total Sales by Year`, 
+    .f = timesFive)
+timesTwo <- function(.x) {return(.x*2)}
+
+modify_if(.x = by_year$`Total Sales by Year`, .p = function(x) x > 500000000, .f = timesTwo)
+```
+
+##3. Use the cbind and rbind function on your dataset.
+```{r}
+Year <- c(2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013)
+Sales <- c(919005546, 850285247, 755045696, 454417263, 592828305, 693256612, 747585171, 860712529)
+df_2 <- cbind(Year, Sales)
+df_2
+
+```
+
+```{r}
+df_3 <- data.frame(Year=c(2014,2015,2016), 
+                   Sales=c(792182425,915747082,919598273))
+
+df_4 <- rbind(df_2, df_3)
+df_4
+```
+
+##4. Split a string, then concatenate the results back together.
+```{r}
+df %>%
+  separate(addr_full, sep = ' ', into = c('House Number', 'Street Name')) %>%
+  mutate(Address = paste(`House Number`, `Street Name`, sep = '-'))
+```
+```{r}
+df %>%
+  separate(`Sale Date`, sep = '-', into = c('Year', 'Month', 'Day')) %>%
+  mutate(`Sale Transaction Date` = paste(`Month`, `Day`, `Year`, sep = '/'))
+```
+
