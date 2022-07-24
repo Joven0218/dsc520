@@ -1,0 +1,126 @@
+---
+title: "Student Survey"
+author: "Melissa Young"
+date: "July 23, 2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+setwd("C:/Users/mdyoung/OneDrive - Bankers Financial Corporation/Documents/R/DSC 520/data")
+```
+
+```{r, include=FALSE}
+library(ggplot2)
+library(GGally)
+library(ggm)
+```
+
+Student Survey
+
+As a data science intern with newly learned knowledge in skills in statistical correlation and R programming, you will analyze the results of a survey recently given to college students. You learn that the research question being investigated is: "Is there a significant relationship between the amount of time spent reading and the time spent watching television?" You are also interested if there are other significant relationships that can be discovered? The survey data is located in this StudentSurvey.csv file.
+
+## Data Set 
+
+```{r}
+df <- read.csv("student-survey.csv")
+head(df, 11)
+```
+        
+## 1. Use R to calculate the covariance of the Survey variables and provide an explanation of why you would use this calculation and what the results indicate.
+```{r, echo=FALSE}
+covariance_survey <- cov(df, method = "pearson", use = "everything")
+GGally::ggpairs(as.data.frame(covariance_survey))
+knitr::kable(covariance_survey, caption = "Covariance for Survey Data")
+```
+I used the pearson method as it is known to be the best method of measuring the association between variables since it is based on covariance. It gives the information about the magnitude of the association and direction of the relationship.\  
+
+The results indicate the below for each association.\
+
+**TimeReading:** TimeTV = negative covariance, Happiness = negative covariance, Gender = negative covariance\ 
+
+**TimeTV:** TimeReading = negative covariance, Happiness = positive covariance, Gender = positive covariance\ 
+
+**Happiness:** TimeReading = negative covariance, TimeTV = positive covariance, Gender = positive covariance\  
+
+**Gender:** TimeReading = negative covariance, TimeTV = positive covariance, Happiness = positive covariance\
+        
+## 2. Examine the Survey data variables. What measurement is being used for the variables? Explain what effect changing the measurement being used for the variables would have on the covariance calculation. Would this be a problem? Explain and provide a better alternative if needed.
+
+The measurement being used for **TimeReading** and **TimeTV** is time intervals, TimeReading seems to be hours and TimeTV seems to be in minutes.  **Happiness** is being measured in a 100 point scale, such as percentage. **Gender** is measured in binary or boolean 1 and 0 with no indication of mapping.\
+
+Changing the measurement of the variables or adding additoinal variables such as tv or book subjects could impact the covariance.  Books can be read for pleasure or study materials and TV shows much the same, documentaries can be watched or the latest episode of Bachlorette. These could impact the Happiness variable.
+        
+## 3. Choose the type of correlation test to perform, explain why you chose this test, and make a prediction if the test yields a positive or negative correlation?
+
+I will use the pearson method to determine if there is a positive or negative correlation between the variables.  I predict that there will be a negative correlation between **TimeReading** and **TimeTV** and **Happiness**.
+        
+## 4. Perform a correlation analysis of:
+### 4.1 All variables
+```{r echo=FALSE}
+correlation_all <- cor(df, method = "pearson", use = "everything")
+knitr::kable(correlation_all, caption = "Pearson Correlation Analysis - All Variables")
+```
+
+### 4.2 A single correlation between two a pair of the variables
+```{r, include=FALSE}
+correlation_pair <- cor(df$Happiness, df$TimeReading, method = "pearson")
+```
+Single correlation between Happiness and TimeReading is **`r correlation_pair`**.
+
+### 4.3 Repeat your correlation test in step 2 but set the confidence interval at 99%
+```{r, include=FALSE}
+correlation_interval <- cor.test(df$Happiness, df$TimeReading, method = "pearson", conf.level = 0.99)
+```
+Single correlation between Happiness and TimeReading at 99% confidence interval is **`r correlation_interval`**.
+
+### 4.4 Describe what the calculations in the correlation matrix suggest about the relationship between the variables. Be specific with your explanation.
+```{r, echo=FALSE}
+GGally::ggpairs(as.data.frame(correlation_all))
+```
+**Time Reading:** TimeReading has a negative correlation with TimeTV, Happiness and Gender. The more students read the less happy they are and the less they get to watch TV.\
+
+**Time TV:** TimeTV has a negative correlation with reading, a positive correlation with happiness, and a very small negative correlation with gender that can be interpreted as no correlation. The more tv students watch the happier they are, and less time to read regardless of the gender.\  
+
+**Happiness:** The more time spent on reading the more their happiness declines. The more time they spend watching tv the happier they get regardless of gender.\
+
+**Gender:** Gender seems to have barely a negative correltation between the other 3 variables.\
+
+## 5. Calculate the correlation coefficient and the coefficient of determination, describe what you conclude about the results.
+```{r, echo=FALSE}
+correlation_coefficient <- cor(df, method = "spearman", use = "everything")
+GGally::ggpairs(as.data.frame(correlation_coefficient))
+knitr::kable(correlation_coefficient, caption = "Correlation Coefficient using Spearman")
+```
+
+Applying the coefficient results in showing the correlation without a confidence interval, the greatest finding shows TimeReading vs TimeTV at -0.907.
+
+```{r, echo=FALSE}
+coefficient_determination <- cor(df, use = "everything", method = "pearson")^2
+GGally::ggpairs(as.data.frame(coefficient_determination))
+knitr::kable(coefficient_determination, caption = "Coefficient of Determination")
+```
+
+Applying the coefficient of determination  results in determining the variablity of correlation, the greatest is between TimeReading and TimeTV at 0.7798. 
+
+## 6. Based on your analysis can you say that watching more TV caused students to read less? Explain.
+
+Yes, there is almost a total negative correlation between watching tv and reading.  The more you watch TV the less you read.  This does bring up the correlation does not equal causation.  Simpliy stating that there are onyl so many hours in the day and if you choose to watch more TV then you have less time for reading.
+
+## 7. Pick three variables and perform a partial correlation, documenting which variable you are "controlling". Explain how this changes your interpretation and explanation of the results.
+
+```{r, include=FALSE}
+df2 <- df[, c("TimeReading", "TimeTV", "Happiness")]
+partial_correlation <- pcor(c("TimeReading", "TimeTV", "Happiness"), var(df2))
+```
+
+Partial Correlation between **TimeReading** and **TimeTV** holding Happiness Constant is **`r partial_correlation`**.\
+
+In the reading vs watching TV correlation above, happiness is a factor since it determines if what students are doing what makes them happy. Happiness as the controlled variable remains a negative correlation between watching tv and reading.
+
+
+
+
