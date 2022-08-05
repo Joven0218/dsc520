@@ -1,0 +1,189 @@
+---
+title: "9.2 Exercise - Thoracic Surgery"
+author: "Melissa Young"
+date: "August 5, 2022"
+output: pdf_document
+---
+
+```{r include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mdyoung/OneDrive - Bankers Financial Corporation/Documents' )
+library(plyr)
+library(dplyr)
+library(corrplot)
+library(tidyverse)
+library(reshape2)
+library(foreign)
+library(caret)
+```
+
+**Fit a Logistic Regression Model to Thoracic Surgery Binary Dataset**
+        
+1.1. For this problem, you will be working with the thoracic surgery data set from the University of California Irvine machine learning repository. This dataset contains information on life expectancy in lung cancer patients after surgery. The underlying thoracic surgery data is in ARFF format. This is a text-based format with information on each of the attributes. You can load this data using a package such as foreign or by cutting and pasting the data section into a CSV file.
+
+```{r, warning=FALSE, message=FALSE}
+thoracicSurgery_original <- foreign::read.arff("ThoraricSurgery.arff")
+thoracicSurgery <- thoracicSurgery_original %>% 
+  as.data.frame() %>% 
+  mutate(id = row_number()) %>% 
+  mutate_if(is.factor, ~ as.character(.)) %>% 
+  mutate(DGN = mapvalues(x = DGN, from = c("DGN1", "DGN2", "DGN3", "DGN4", "DGN5", "DGN6", "DGN8"), to = c(1:6, 8)),
+         PRE6 = mapvalues(x = PRE6, from = c('PRZ0', 'PRZ1', 'PRZ2'), to = c(0:2)),
+         PRE14 = mapvalues(x = PRE14, from = c("OC11", "OC12", "OC13", "OC14"), to = c(11:14))
+  )
+thoracicSurgery <- dcast(mutate(
+  melt(thoracicSurgery, id.var="id"),
+  value = mapvalues(value, 
+                    c("T","F"),
+                    c(1, 0)
+  )), id ~ variable) 
+thoracicSurgery <- thoracicSurgery %>% 
+  mutate_if(is.character, ~as.numeric(.))
+#- Thoracic Surgery Column Definitions: 
+# 1. DGN: Diagnosis - specific combination of ICD-10 codes for primary and secondary as well multiple tumours if any (DGN3,DGN2,DGN4,DGN6,DGN5,DGN8,DGN1)  
+# 2. PRE4: Forced vital capacity - FVC (numeric)   
+# 3. PRE5: Volume that has been exhaled at the end of the first second of forced expiration - FEV1 (numeric)  
+# 4. PRE6: Performance status - Zubrod scale (PRZ2,PRZ1,PRZ0)   
+# 5. PRE7: Pain before surgery (T,F)  
+# 6. PRE8: Haemoptysis before surgery (T,F)   
+# 7. PRE9: Dyspnoea before surgery (T,F)   
+# 8. PRE10: Cough before surgery (T,F)   
+# 9. PRE11: Weakness before surgery (T,F)  
+# 10. PRE14: T in clinical TNM - size of the original tumour, from OC11 (smallest) to OC14 (largest)   (OC11,OC14,OC12,OC13)   
+# 11. PRE17: Type 2 DM - diabetes mellitus (T,F)   
+# 12. PRE19: MI up to 6 months (T,F)   
+# 13. PRE25: PAD - peripheral arterial diseases (T,F) 
+# 14. PRE30: Smoking (T,F) 
+# 15. PRE32: Asthma (T,F) 
+# 16. AGE: Age at surgery (numeric)
+# 17. Risk1Y: 1 year survival period - (T)rue value if died (T,F)
+```
+
+```{r, echo=FALSE}
+head(thoracicSurgery,10)
+```
+
+
+**Assignment Instructions:**
+
+2.1. Fit a binary logistic regression model to the data set that predicts whether or not the patient survived for one year (the Risk1Y variable) after the surgery. Use the glm() function to perform the logistic regression. See Generalized Linear Models for an example. Include a summary using the summary() function in your results.
+            
+```{r}
+survival_glm_all <- glm(Risk1Yr ~ DGN + PRE4 + PRE5 + PRE6 + PRE8 + PRE9 + PRE10 + PRE11 + PRE14 + PRE17 + PRE19 + PRE25 + PRE30 + PRE32 + AGE, 
+                        data = thoracicSurgery)   
+summary(survival_glm_all)
+```
+```{r, warning=FALSE, message=FALSE}
+survival_glm <- glm(Risk1Yr ~ DGN +  PRE9 + PRE14 + PRE17 + PRE30 , 
+                    data = thoracicSurgery)   
+summary(survival_glm)
+focusThoracicSurgery <- thoracicSurgery %>% 
+  select(c(Risk1Yr, DGN, PRE9, PRE14, PRE17, PRE30))
+
+
+x <- focusThoracicSurgery[,2:6]
+y <- focusThoracicSurgery[,1]
+scales <- list(x = list(relation="free"),
+               y=list(relation="free"))
+featurePlot(x = x, 
+            y = y,
+            plot="pairs",
+            scales=scales)
+
+
+correlationThoracicSurgery <- cor(x)
+corrplot(correlationThoracicSurgery, method="circle")
+```
+            
+2.2. According to the summary, which variables had the greatest effect on the survival rate?\  
+The size of the tumor and if they smoked or not. 
+
+2.3. To compute the accuracy of your model, use the dataset to predict the outcome variable. The percent of correct predictions is the accuracy of your model. What is the accuracy of your model?
+            
+```{r, warning=FALSE, message=FALSE}
+thoracic_fit <- predict(survival_glm, type = "response")
+summary(thoracic_fit)
+thoracic_predictor <-ifelse(thoracic_fit > 0.5, 1, 0)
+
+thoracic_predictor_data <- thoracic_predictor %>%   
+  as.data.frame() %>% 
+  mutate(id = row_number())
+
+names(thoracic_predictor_data)[1] <- 'Prediction'
+
+thoracic_class_data <- focusThoracicSurgery %>% 
+  mutate(id = row_number(),
+         Count = 1) %>% 
+  left_join(thoracic_predictor_data) %>% 
+  mutate(`Correct Prediction` = ifelse(Risk1Yr - Prediction == 0, 'Correct', 'Incorrect'), 
+         Risk1Yr = ifelse(Risk1Yr == 1, "T", "F"))
+
+totRecords_thor <- length(thoracic_class_data$Risk1Yr)
+
+thoracic_class_data %>% 
+  group_by(Risk1Yr, `Correct Prediction`) %>% 
+  summarise(`Prediction Count` = sum(Count)) %>% 
+  mutate(Accurracy = round(`Prediction Count` / totRecords_thor,5))
+```
+            
+   
+2. Fit a Logistic Regression Model
+```{r,}
+binary_classifier_data_original <- read.csv('binary-classifier-data.csv')
+```
+
+```{r}
+head(binary_classifier_data_original)
+```
+
+
+1. Fit a logistic regression model to the binary-classifier-data.csv dataset
+2. The dataset (found in binary-classifier-data.csv) contains three variables; label, x, and y. The label variable is either 0 or 1 and is the output we want to predict using the x and y variables.
+```{r, warning=FALSE, message=FALSE}
+
+data_lm <- glm(label ~ x + y, 
+                 data = binary_classifier_data_original)
+summary(data_lm)
+x2 <- binary_classifier_data_original[,2:3]
+y2 <- binary_classifier_data_original[,1]
+featurePlot(x = x2, 
+            y = y2,
+            plot="pairs")
+            # scales=scales
+data_lm_fit <- predict(data_lm, type = 'response')
+data_lm_predictor <- ifelse(data_lm_fit > .5, 1, 0)
+
+summary(data_lm_fit)
+
+data_lm_predictionData <- data_lm_predictor %>%   
+  as.data.frame() %>% 
+  mutate(id = row_number()) 
+
+names(data_lm_predictionData)[1] <- 'Prediction'
+
+binaryClassData <- binary_classifier_data_original %>% 
+  mutate(id = row_number(),
+         Count = 1) %>% 
+  left_join(data_lm_predictionData) %>% 
+  mutate(`Correct Prediction` = ifelse(label - Prediction == 0, 'Correct', 'Incorrect'))
+
+totRecords <- length(binaryClassData$label)
+```
+        
+2.1. What is the accuracy of the logistic regression classifier?
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+binaryClassData %>% 
+  group_by(label, `Correct Prediction`) %>% 
+  summarise(`Prediction Count` = sum(Count)) %>% 
+  mutate(Accurracy = round(`Prediction Count` / totRecords, 5))
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+knitr::kable (binaryClassData %>% 
+  group_by(label, `Correct Prediction`) %>% 
+  summarise(`Prediction Count` = sum(Count)) %>% 
+  mutate(Accurracy = round(`Prediction Count` / totRecords, 5)))
+```
+         
+
