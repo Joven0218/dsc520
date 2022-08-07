@@ -1,0 +1,241 @@
+---
+title: "Final Project - Step 2v2"
+author: "Melissa Young"
+date: "August 7, 2022"
+output: pdf_document
+---
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/mdyoung/OneDrive - Bankers Financial Corporation/Documents')
+```
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readxl)
+library(lubridate)
+library(outliers)
+library(lmtest)
+library(car)
+library(ggmap)
+library(usmap)
+library(data.table)
+library(pastecs)
+```
+
+
+# How to import and clean my data
+I will start with saving my original data sets as you should always keep a control version to come back in case of error or process changes etc. These sets below came from a data lake housed on a Microsoft Azure platform.  The data was queried using SQL from the source system. They were saved as CSV files to begin with but conversion to Excel was needed.  I will explain further in the report. 
+
+
+My data sets are labeled below:
+
+1. Sales_Original.xlsx    
+2. Claims_Original.csv   
+3. Dealers_Original.csv   
+
+
+**1.  Sales_Orginal**  
+This data set was by far the largest I am dealing with for my study.  It started out over 600,000 KB in size with 3Mk++ rows and 94 columns.  To make the data more manageable, many columns have been removed that are not necessary to this study and we now have 24 columns with 587k rows. While also narrowing my study down to the largest product group, appliances and using data from the past 4 years.  I converted the original csv file to excel to save space as xlxs files are actually compressed (zipped).  The details contained include:  Contract Number, Dealer Number, Product Description, Manufacturer, term length, Store details, Contract Cost, Product Retail and the Product Grouping.  One column that I dropped after the original EDA was the Void Date since all polices were active as of data pull the format was "0001-01-01" and it returned an error code when reading the data frames.  I used the Dealer_Original data set to bring in the Buying Group to filter for the group I am using, "Nationwide".  The join identifier was the Dealer Number. The ProductDescriptions were formatted to align with outlines.  Such as "COOKTOP" and "COOK TOP" were all converted to the same format "COOKTOP", rows with blank states were also removed. This data set will serve as my control or master file. 
+
+
+**2.  Claims_Original**  
+This data set includes the ContractNumber, ClaimNumber, Loss Dates, ClaimAmount (which is the sum of the PartsAmount + LaborAmount + RemovalReinstallationAmount + ServiceCallAmount + ShippingAmount + TaxAmount + GSTTaxAmount), ServiceCenter and dates of authorization and servicing. Using the ContractNumber as the join identifier, I have added the ProductDecsription and ManufacturerDescription from the Sales_Original data set.
+
+
+**3.  Dealers_Original**  
+The details from this data set include the Dealer Number, Legacy Dealer Name (from old system of record), Dealer Full Name, Dealer Short Name and Group Name. It was pulled to use as the lookup for the group name within the sales and claims data sets as I was only interested in one "buying group".  I noticed that my original pull did not include the group shortname so I had to go back and add in the column needed. The join identifier from this data set to sales data was the Dealer Number. This data set was saved as a CSV file and was not large at 259 KB.
+
+
+```{r, include=FALSE}
+df_sales_original <- read_excel("Sales_Original.xlsx")
+df_claims_original <- read.csv("Claims_Original.csv")
+df_dealer_orignal <- read.csv("Dealers_Original.csv")
+```
+
+# What does the final data set look like?
+The final set is a consolidation of the items listed above. 
+
+After the original data cleanup mentioned above the following steps were taken:
+
+**Step 1** - Dropped additional columns and rows that were unnecessary and those that had missing values.  Such as contract term = 0 (6,556 rows), ProductDescription missing (574 rows).    
+**Step 2** - Joined the Dealer data with the sales data to filter down to the one buying group I am focusing on "Nationwide".     
+**Step 3** - Joined the claims data with the sales data after filtering for Nationwide, adding the claim amount to any contract that had incurred a loss.        
+**Step 4** - Dropped rows were state was empty or converted to appropriate value, such as Oregon showing as "OR" and "0R".    
+**Step 5** - df_sales is my control set, 25 columns and 580,315 rows.  
+
+```{r, include=FALSE}
+summary(df_sales_original)
+```
+
+```{r, echo=FALSE}
+stat.desc(df_sales_original[20:22])
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_sales <- df_sales_original %>%
+  separate(DealerNumber, into = c("Dealer Number", "Dealer Letter"), sep = " ") %>%
+  group_by(ProductDescription) %>%
+  summarize(`ContractCostAmount` = sum(`ContractCostAmount`)) %>%
+  arrange(desc(`ContractCostAmount`))
+  
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::kable(head(df_sales), caption = "Total Sales by Product")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_sales <- df_sales_original %>%
+  group_by(ProductDescription) %>%
+  summarize(`ClaimAmount` = sum(`ClaimAmount`)) %>%
+  arrange(desc(`ClaimAmount`))
+ 
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::kable(head(df_sales), caption = "Total Claims by Product")
+```
+
+# Questions for future steps.
+1. Have I removed any data that I will need further into the study? 
+2. Do I have enough good data for a plausible model with good accuracy? 
+3. Have I completed the proper EDA to answer my questions? 
+
+# What information is not self-evident?
+For this study, I am only using the premium charged for the warranty and the claims total incurred.  I have not factored in the amount of overhead needed to service these contracts. At this stage, if the claims are higher than the premium, the product should be discussed for elimination. Another item that is not self-evident is that I am only working with our business's data and not benchmarked against competitors. Could under performing products be an issue only for us?   
+
+# What are different ways you could look at this data?
+There are many way I can approach the data with grouping and summarizing.  One is the product description levels, another is premium sold by state as well as claims incurred by state. We could even go into more detail and view the performance by manufacturer and model within that manufacturer. 
+
+# How do you plan to slice and dice the data?
+I plan to view the data in product groupings to find the most relevant products producing a claim.  As well as the manufacturer and state.   
+
+# How could you summarize your data to answer key questions?
+Summarize the claims and premium totals by year sold. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_summary_product_description <- df_sales_original %>%
+  group_by(Year) %>%
+  summarise(`ClaimAmount` = sum(`ClaimAmount`), `ContractCostAmount` = sum(`ContractCostAmount`)) %>%
+  arrange(desc(`Year`))
+
+knitr::kable(df_summary_product_description, caption = "Total by Year")
+
+```
+
+Summarize by the Product Description and calculate loss ratio.  Created new variable, Loss Ratio, which tells us the likelihood of a loss happening on a product:  Refrigerator = LR of 0.1954, loss will happen at least 20% of the time within the first 3 years of the gross written premium.  This will only increase with calculating on earned premium, which is the contract cost earned over the contract term.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_summary_product_description <- df_sales_original %>%
+  group_by(ProductDescription) %>%
+  summarise(`ContractCostAmount` = sum(`ContractCostAmount`), `ClaimAmount` = sum(`ClaimAmount`)) %>%
+  mutate(LossRatio = `ClaimAmount`/`ContractCostAmount`) %>%
+  arrange(desc(`ContractCostAmount`))
+  
+knitr::kable(head(df_summary_product_description, caption = "Loss Ratio by Product"))
+
+```
+
+Summarize by the manufacturer. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_summary_product_description <- df_sales_original %>%
+  group_by(ManufacturerDescription) %>%
+  summarise(`ContractCostAmount` = sum(`ContractCostAmount`), `ClaimAmount` = sum(`ClaimAmount`)) %>%
+  mutate(LossRatio = `ClaimAmount`/`ContractCostAmount`) %>%
+  arrange(desc(`LossRatio`))
+  
+knitr::kable(head(df_summary_product_description, caption = "Loss Ratio by Manufacturer"))
+
+```
+
+Summarize by the model. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_summary_product_description <- df_sales_original %>%
+  group_by(ModelNumber, ManufacturerDescription, ProductDescription) %>%
+  summarise(`ContractCostAmount` = sum(`ContractCostAmount`), `ClaimAmount` = sum(`ClaimAmount`)) %>%
+  mutate(LossRatio = `ClaimAmount`/`ContractCostAmount`) %>%
+  arrange(desc(`ClaimAmount`))
+  
+knitr::kable(head(df_summary_product_description, caption = "Loss Ratio by Model"))
+
+```
+
+Summarize by the state.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_summary_product_description <- df_sales_original %>%
+  group_by(StateCode) %>%
+  summarise(`ClaimAmount` = sum(`ClaimAmount`), `ContractCostAmount` = sum(`ContractCostAmount`)) %>%
+  arrange(desc(`ClaimAmount`))
+ 
+knitr::kable(head(df_summary_product_description, caption = "Totals by State"))
+```
+
+# What types of plots and tables will help you to illustrate the findings to your questions?
+1. Line graph\
+2. Bar chart\
+3. Histogram\
+4. Scatter plot\
+5. Boxplot\
+6. Density Map\
+
+Exert of examples below:
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+df_summary_product_description <- df_sales_original %>%
+  group_by(ProductDescription) %>%
+  summarise(`ContractCostAmount` = sum(`ContractCostAmount`), `ClaimAmount` = sum(`ClaimAmount`)) %>%
+  mutate(LossRatio = `ClaimAmount`/`ContractCostAmount`) %>%
+  arrange(desc(`ContractCostAmount`))
+  
+knitr::kable(head(df_summary_product_description, caption = "Loss Ratio by Product"))
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_summary_product_description %>%
+  ggplot(aes(LossRatio)) + geom_histogram()
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_summary_product_description %>%
+  ggplot(aes(x = LossRatio, y = ProductDescription)) + geom_bar(aes(), stat = "identity", postion = "dodge")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+dat <- data.frame(state = c("CA", "FL", "MD", "WA", "OR", "WI", "VA", "LA", "TX", "NY", "OH", "AL", "MI", "NE", "MO", "IL","IA", "AR", "IN", "PA", "NM", "TN", "AZ", "OK", "MN", "DC", "HI", "KY", "ID", "WV", "KS", "GA", "MT", "NC", "AK", "SC", "MS", "UT", "CO", "NJ", "ND", "WY", "NV", "MA", "ME", "SD", "DE", "VT", "CT", "NH", "PE"), Premium = c(7354, 4755, 2551, 2553, 2767, 2473, 1887, 2028, 1298, 1383, 1135, 1314, 1138, 973, 1198, 769, 760, 973, 758, 726, 728, 554, 310, 372, 375, 275, 284, 293, 232, 174, 151, 152, 159, 178, 156, 117, 73, 55, 53, 74,28, 47, 30, 26, 10, 16, 3, 7, 8, 5, 3 ))
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+plot_usmap(data = dat,  values = "Premium", color = "black") +
+             scale_fill_continuous(  
+               low = "white", high = "green", name = "Premium Totals in Thousands", label = scales::comma
+  ) + theme(legend.position = "right")
+               
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+dat <- data.frame(state = c("CA", "FL", "MD", "WA", "OR", "WI", "VA", "LA", "TX", "NY", "OH", "AL", "MI", "NE", "MO", "IL","IA", "AR", "IN", "PA", "NM", "TN", "AZ", "OK", "MN", "DC", "HI", "KY", "ID", "WV", "KS", "GA", "MT", "NC", "AK", "SC", "MS", "UT", "CO", "NJ", "ND", "WY", "NV", "MA", "ME", "SD", "DE", "VT", "CT", "NH", "PE" ), Premium = c(842, 824, 476, 430, 401, 360, 339, 322, 201, 191, 188, 164, 155, 151, 142, 127, 126, 116, 105, 98, 92, 78, 59, 58, 55, 52, 45, 42, 30, 28, 26, 25 ,25, 19, 16, 10, 9, 8, 7, 6, 5, 5, 5, 3, 2, 1, .5, .5, .5, .3, .2 ))
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+plot_usmap(data = dat,  values = "Premium", color = "black") +
+             scale_fill_continuous(  
+               low = "white", high = "red", name = "Claims Totals in Thousands", label = scales::comma
+  ) + theme(legend.position = "right")
+               
+```
+
+# Do you plan on incorporating any machine learning techniques to answer your research questions? Explain.
+I will attempt to perform a multiple linear regression.  Using the correlation (or lack of) relationship between the premium and incurred claim losses along with product description groups including product, manufacturer and model number. 
+
+# Questions for future steps.
+1. Will the manufacturer and model impact the outcome? 
+2. Have I missed any data or thought processes for this one study? 
+3. Will this produce a reliable model to present to the executives for better business decision making? 
